@@ -1,7 +1,7 @@
 /*************************
  * CONFIG
  *************************/
-const DEV_MODE = true; // false for real walk
+const DEV_MODE = false; // false for real walk
 
 /*************************
  * UI
