@@ -8,14 +8,22 @@
 </head>
 <body>
 
-  <div id="walkButton" class="idle">
-    START WALK
+  <!-- Robot -->
+  <div class="robot idle" id="robot">
+    <svg viewBox="0 0 400 300" class="robot-face">
+      <rect x="120" y="120" width="60" height="60" rx="14" class="eye" />
+      <rect x="220" y="120" width="60" height="60" rx="14" class="eye" />
+    </svg>
   </div>
 
-  <!-- optional debug text (can remove later) -->
+  <!-- Action text -->
+  <div id="walkAction">Tap to start walk</div>
+
+  <!-- Debug (optional, can remove later) -->
   <div id="status"></div>
 
   <script src="script.js"></script>
 </body>
+
 
 </html>

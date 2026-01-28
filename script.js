@@ -1,12 +1,13 @@
 /*************************
  * CONFIG
  *************************/
-const DEV_MODE = false; // false for real walk
+const DEV_MODE = false; // true only for hostel testing
 
 /*************************
  * UI
  *************************/
-const button = document.getElementById("walkButton");
+const robot = document.getElementById("robot");
+const walkAction = document.getElementById("walkAction");
 const statusEl = document.getElementById("status");
 
 /*************************
@@ -19,6 +20,14 @@ let currentAudio = null;
 let audioUnlocked = false;
 
 /*************************
+ * ROBOT STATE
+ *************************/
+function setRobotState(state) {
+  robot.classList.remove("idle", "thinking", "speaking");
+  robot.classList.add(state);
+}
+
+/*************************
  * ZONES (CIRCULAR)
  *************************/
 const zones = [
@@ -27,7 +36,7 @@ const zones = [
     name: "Threshold",
     lat: 12.968515,
     lon: 77.724438,
-    radius: 30, // meters
+    radius: 30,
     audio: "audio/zoneA.mp3",
     played: false
   },
@@ -76,18 +85,21 @@ function resetZones() {
   zones.forEach(z => (z.played = false));
 }
 
-/* Mobile audio unlock */
+/* Unlock audio on user gesture (mobile safe) */
 function unlockAudio() {
   if (audioUnlocked) return;
 
   const silent = new Audio("audio/zoneA.mp3");
   silent.volume = 0;
-  silent.play().then(() => {
-    silent.pause();
-    audioUnlocked = true;
-  }).catch(() => {
-    console.warn("Audio unlock failed");
-  });
+
+  silent.play()
+    .then(() => {
+      silent.pause();
+      audioUnlocked = true;
+    })
+    .catch(() => {
+      console.warn("Audio unlock failed");
+    });
 }
 
 function playAudio(src) {
@@ -98,10 +110,14 @@ function playAudio(src) {
     currentAudio.currentTime = 0;
   }
 
+  setRobotState("speaking");
+
   currentAudio = new Audio(src);
-  currentAudio.play().catch(err => {
-    console.error("Audio play failed:", err);
-  });
+  currentAudio.play().catch(console.error);
+
+  currentAudio.onended = () => {
+    setRobotState("idle");
+  };
 }
 
 function stopAudio() {
@@ -110,31 +126,30 @@ function stopAudio() {
     currentAudio.currentTime = 0;
     currentAudio = null;
   }
+  setRobotState("idle");
 }
 
 /*************************
- * DISTANCE CALC (meters)
+ * DISTANCE (meters)
  *************************/
 function distanceInMeters(lat1, lon1, lat2, lon2) {
-  const R = 6371000; // Earth radius in meters
+  const R = 6371000;
   const toRad = deg => deg * Math.PI / 180;
 
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
 
   const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) *
       Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+      Math.sin(dLon / 2) ** 2;
 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 /*************************
- * CORE LOCATION HANDLER
+ * LOCATION HANDLER
  *************************/
 function handleLocation(lat, lon, label = "") {
   statusEl.textContent = `${label} ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
@@ -153,16 +168,16 @@ function handleLocation(lat, lon, label = "") {
 }
 
 /*************************
- * START / STOP WALK
+ * START / END WALK
  *************************/
 function startWalk() {
   isWalking = true;
-  button.textContent = "END WALK";
-  button.classList.remove("idle");
-  button.classList.add("walking");
+  walkAction.textContent = "End walk";
+  walkAction.classList.add("walking");
 
   resetZones();
   unlockAudio();
+  setRobotState("thinking");
   statusEl.textContent = "Walking…";
 
   if (DEV_MODE) {
@@ -201,12 +216,12 @@ function startWalk() {
 
 function endWalk() {
   isWalking = false;
-  button.textContent = "START WALK";
-  button.classList.remove("walking");
-  button.classList.add("idle");
+  walkAction.textContent = "Tap to start walk";
+  walkAction.classList.remove("walking");
 
-  statusEl.textContent = "Walk ended";
   stopAudio();
+  setRobotState("idle");
+  statusEl.textContent = "Walk ended";
 
   if (watchId !== null) {
     navigator.geolocation.clearWatch(watchId);
@@ -220,9 +235,9 @@ function endWalk() {
 }
 
 /*************************
- * BUTTON HANDLER
+ * TAP HANDLER (TEXT = BUTTON)
  *************************/
-button.addEventListener("click", () => {
+walkAction.addEventListener("click", () => {
   if (!isWalking) {
     startWalk();
   } else {
