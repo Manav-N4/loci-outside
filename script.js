@@ -1,10 +1,24 @@
 /*************************
  * CONFIG
  *************************/
-const DEV_MODE = false; // set to false on real walk
+const DEV_MODE = true; // false for real walk
 
 /*************************
- * ZONES (define FIRST)
+ * UI
+ *************************/
+const button = document.getElementById("walkButton");
+const statusEl = document.getElementById("status");
+
+/*************************
+ * STATE
+ *************************/
+let isWalking = false;
+let watchId = null;
+let devInterval = null;
+let currentAudio = null;
+
+/*************************
+ * ZONES
  *************************/
 const zones = [
   {
@@ -19,7 +33,7 @@ const zones = [
   },
   {
     id: "B",
-    name: "Curve",
+    name: "In-Between",
     latMin: 12.9715,
     latMax: 12.9720,
     lonMin: 77.7155,
@@ -29,7 +43,7 @@ const zones = [
   },
   {
     id: "C",
-    name: "Building",
+    name: "Institutional",
     latMin: 12.9720,
     latMax: 12.9725,
     lonMin: 77.7160,
@@ -39,7 +53,7 @@ const zones = [
   },
   {
     id: "D",
-    name: "Exit",
+    name: "Release",
     latMin: 12.9725,
     latMax: 12.9730,
     lonMin: 77.7165,
@@ -50,28 +64,29 @@ const zones = [
 ];
 
 /*************************
- * UI
+ * HELPERS
  *************************/
-const statusEl = document.getElementById("status");
-
-/*************************
- * AUDIO CONTROLLER
- *************************/
-let currentAudio = null;
+function resetZones() {
+  zones.forEach(z => (z.played = false));
+}
 
 function playAudio(src) {
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.currentTime = 0;
   }
-
   currentAudio = new Audio(src);
   currentAudio.play();
 }
 
-/*************************
- * ZONE CHECK
- *************************/
+function stopAudio() {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+    currentAudio = null;
+  }
+}
+
 function isInsideZone(lat, lon, zone) {
   return (
     lat >= zone.latMin &&
@@ -81,64 +96,85 @@ function isInsideZone(lat, lon, zone) {
   );
 }
 
-/*************************
- * CORE LOCATION HANDLER
- *************************/
-function handleLocation(latitude, longitude, label = "") {
-  statusEl.textContent =
-    `${label} ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+function handleLocation(lat, lon, label = "") {
+  statusEl.textContent = `${label} ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
 
   zones.forEach(zone => {
-    if (!zone.played && isInsideZone(latitude, longitude, zone)) {
+    if (!zone.played && isInsideZone(lat, lon, zone)) {
       zone.played = true;
-      statusEl.textContent = `Loci: ${zone.name}`;
       playAudio(zone.audio);
     }
   });
 }
 
 /*************************
- * DEV MODE — SIMULATED WALK
+ * START / STOP WALK
  *************************/
-if (DEV_MODE) {
-  let step = 0;
+function startWalk() {
+  isWalking = true;
+  button.textContent = "END WALK";
+  button.classList.remove("idle");
+  button.classList.add("walking");
 
-  const fakePath = [
-    { lat: 12.9711, lon: 77.7151 },
-    { lat: 12.9716, lon: 77.7156 },
-    { lat: 12.9721, lon: 77.7161 },
-    { lat: 12.9726, lon: 77.7166 }
-  ];
+  resetZones();
+  statusEl.textContent = "Walking…";
 
-  statusEl.textContent = "DEV MODE: Simulating walk";
+  if (DEV_MODE) {
+    let step = 0;
+    const fakePath = [
+      { lat: 12.9711, lon: 77.7151 },
+      { lat: 12.9716, lon: 77.7156 },
+      { lat: 12.9721, lon: 77.7161 },
+      { lat: 12.9726, lon: 77.7166 }
+    ];
 
-  setInterval(() => {
-    const pos = fakePath[step % fakePath.length];
-    handleLocation(pos.lat, pos.lon, "Simulating:");
-    step++;
-  }, 5000);
+    devInterval = setInterval(() => {
+      const pos = fakePath[step % fakePath.length];
+      handleLocation(pos.lat, pos.lon, "Simulating:");
+      step++;
+    }, 5000);
 
-} else {
-
-  /*************************
-   * REAL GPS MODE
-   *************************/
-  if (!navigator.geolocation) {
-    statusEl.textContent = "Geolocation not supported";
   } else {
-    navigator.geolocation.watchPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
+    watchId = navigator.geolocation.watchPosition(
+      pos => {
+        const { latitude, longitude } = pos.coords;
         handleLocation(latitude, longitude, "Walking:");
       },
       () => {
-        statusEl.textContent = "Location access needed for Loci";
+        statusEl.textContent = "Location access needed";
       },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 1000,
-        timeout: 5000
-      }
+      { enableHighAccuracy: true }
     );
   }
 }
+
+function endWalk() {
+  isWalking = false;
+  button.textContent = "START WALK";
+  button.classList.remove("walking");
+  button.classList.add("idle");
+
+  statusEl.textContent = "Walk ended";
+  stopAudio();
+
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+
+  if (devInterval !== null) {
+    clearInterval(devInterval);
+    devInterval = null;
+  }
+}
+
+/*************************
+ * BUTTON HANDLER
+ *************************/
+button.addEventListener("click", () => {
+  if (!isWalking) {
+    startWalk();
+  } else {
+    endWalk();
+  }
+});
