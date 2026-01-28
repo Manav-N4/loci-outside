@@ -1,0 +1,22 @@
+body {
+  margin: 0;
+  height: 100vh;
+  background: #050b14;
+  color: #9fb7ff;
+  font-family: system-ui, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#mascot {
+  font-size: 64px;
+  opacity: 0.6;
+}
+
+#status {
+  position: fixed;
+  bottom: 20px;
+  font-size: 12px;
+  opacity: 0.4;
+}
