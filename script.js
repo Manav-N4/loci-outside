@@ -16,6 +16,7 @@ let isWalking = false;
 let watchId = null;
 let devInterval = null;
 let currentAudio = null;
+let audioUnlocked = false;
 
 /*************************
  * ZONES
@@ -23,42 +24,52 @@ let currentAudio = null;
 const zones = [
   {
     id: "A",
-    name: "Arrival",
-    latMin: 12.9710,
-    latMax: 12.9715,
-    lonMin: 77.7150,
-    lonMax: 77.7155,
+    name: "Threshold",
+    latMin: 12.968515 - 0.00025,
+    latMax: 12.968515 + 0.00025,
+    lonMin: 77.724438 - 0.00025,
+    lonMax: 77.724438 + 0.00025,
     audio: "audio/zoneA.mp3",
     played: false
   },
   {
     id: "B",
     name: "In-Between",
-    latMin: 12.9715,
-    latMax: 12.9720,
-    lonMin: 77.7155,
-    lonMax: 77.7160,
+    latMin: 12.968289 - 0.00025,
+    latMax: 12.968289 + 0.00025,
+    lonMin: 77.724186 - 0.00025,
+    lonMax: 77.724186 + 0.00025,
     audio: "audio/zoneB.mp3",
     played: false
   },
   {
     id: "C",
-    name: "Institutional",
-    latMin: 12.9720,
-    latMax: 12.9725,
-    lonMin: 77.7160,
-    lonMax: 77.7165,
+    name: "Connector",
+    latMin: 12.968184 - 0.00025,
+    latMax: 12.968184 + 0.00025,
+    lonMin: 77.723790 - 0.00025,
+    lonMax: 77.723790 + 0.00025,
     audio: "audio/zoneC.mp3",
     played: false
   },
   {
     id: "D",
-    name: "Release",
-    latMin: 12.9725,
-    latMax: 12.9730,
-    lonMin: 77.7165,
-    lonMax: 77.7170,
+    name: "Institutional Edge",
+    latMin: 12.968360 - 0.00025,
+    latMax: 12.968360 + 0.00025,
+    lonMin: 77.723265 - 0.00025,
+    lonMax: 77.723265 + 0.00025,
     audio: "audio/zoneD.mp3",
+    played: false
+  },
+  {
+    id: "E",
+    name: "Release",
+    latMin: 12.968690 - 0.00025,
+    latMax: 12.968690 + 0.00025,
+    lonMin: 77.722852 - 0.00025,
+    lonMax: 77.722852 + 0.00025,
+    audio: "audio/zoneE.mp3",
     played: false
   }
 ];
@@ -70,13 +81,33 @@ function resetZones() {
   zones.forEach(z => (z.played = false));
 }
 
+function unlockAudio() {
+  if (audioUnlocked) return;
+
+  const silent = new Audio();
+  silent.src = "audio/zoneA.mp3"; // any valid file
+  silent.volume = 0;
+  silent.play().then(() => {
+    silent.pause();
+    audioUnlocked = true;
+    console.log("Audio unlocked");
+  }).catch(() => {
+    console.warn("Audio unlock failed");
+  });
+}
+
 function playAudio(src) {
+  if (!audioUnlocked) return;
+
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.currentTime = 0;
   }
+
   currentAudio = new Audio(src);
-  currentAudio.play();
+  currentAudio.play().catch(err => {
+    console.error("Audio play failed:", err);
+  });
 }
 
 function stopAudio() {
@@ -102,6 +133,7 @@ function handleLocation(lat, lon, label = "") {
   zones.forEach(zone => {
     if (!zone.played && isInsideZone(lat, lon, zone)) {
       zone.played = true;
+      statusEl.textContent = `Loci: ${zone.name}`;
       playAudio(zone.audio);
     }
   });
@@ -117,22 +149,24 @@ function startWalk() {
   button.classList.add("walking");
 
   resetZones();
+  unlockAudio();
   statusEl.textContent = "Walking…";
 
   if (DEV_MODE) {
     let step = 0;
     const fakePath = [
-      { lat: 12.9711, lon: 77.7151 },
-      { lat: 12.9716, lon: 77.7156 },
-      { lat: 12.9721, lon: 77.7161 },
-      { lat: 12.9726, lon: 77.7166 }
+      { lat: 12.968515, lon: 77.724438 },
+      { lat: 12.968289, lon: 77.724186 },
+      { lat: 12.968184, lon: 77.723790 },
+      { lat: 12.968360, lon: 77.723265 },
+      { lat: 12.968690, lon: 77.722852 }
     ];
 
     devInterval = setInterval(() => {
       const pos = fakePath[step % fakePath.length];
       handleLocation(pos.lat, pos.lon, "Simulating:");
       step++;
-    }, 5000);
+    }, 4000);
 
   } else {
     watchId = navigator.geolocation.watchPosition(
@@ -143,7 +177,11 @@ function startWalk() {
       () => {
         statusEl.textContent = "Location access needed";
       },
-      { enableHighAccuracy: true }
+      {
+        enableHighAccuracy: true,
+        maximumAge: 1000,
+        timeout: 5000
+      }
     );
   }
 }
