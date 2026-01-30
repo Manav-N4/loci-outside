@@ -1,13 +1,8 @@
 /*************************
  * CONFIG
  *************************/
-const DEV_MODE = false; // true only for hostel testing
-
-// Soft buffer to reduce silence between zones (meters)
-const EXTRA_RADIUS_BUFFER = 60;
-
-// Cooldown to avoid jitter re-triggers (ms)
-const TRIGGER_COOLDOWN = 8000;
+const DEV_MODE = false; // keep false for real walk
+const MAX_MISS_DISTANCE = 55; // meters (dead-zone fallback)
 
 /*************************
  * UI
@@ -24,7 +19,8 @@ let watchId = null;
 let devInterval = null;
 let currentAudio = null;
 let audioUnlocked = false;
-let lastTriggerTime = 0;
+let isPlayingZone = false;
+let currentZoneIndex = 0;
 
 /*************************
  * ROBOT STATE
@@ -35,50 +31,47 @@ function setRobotState(state) {
 }
 
 /*************************
- * ZONES (CIRCULAR)
+ * ZONES — FINAL LOCK
  *************************/
 const zones = [
   {
     id: "Z1",
-    name: "Polaris",
     lat: 12.968667,
     lon: 77.722863,
     radius: 35,
-    audio: "audio/zone1.mp3",
-    played: false
+    audio: "audio/zone1.mp3"
   },
   {
     id: "Z2",
-    name: "Tech Cluster",
     lat: 12.968514,
     lon: 77.723432,
     radius: 35,
-    audio: "audio/zone2.mp3",
-    played: false
+    audio: "audio/zone2.mp3"
   },
   {
     id: "Z3",
-    name: "Vedic Chai",
     lat: 12.968140,
     lon: 77.723941,
-    radius: 30,
-    audio: "audio/zone3.mp3",
-    played: false
+    radius: 35,
+    audio: "audio/zone3.mp3"
   }
 ];
 
 /*************************
- * HELPERS
+ * RESET
  *************************/
-function resetZones() {
-  zones.forEach(z => (z.played = false));
+function resetWalkState() {
+  currentZoneIndex = 0;
+  isPlayingZone = false;
 }
 
-/* Unlock audio on user gesture (mobile safe) */
+/*************************
+ * AUDIO UNLOCK (MOBILE SAFE)
+ *************************/
 function unlockAudio() {
   if (audioUnlocked) return;
 
-  const silent = new Audio(zones[0].audio);
+  const silent = new Audio("audio/zone1.mp3");
   silent.volume = 0;
 
   silent.play()
@@ -87,24 +80,26 @@ function unlockAudio() {
       audioUnlocked = true;
     })
     .catch(() => {
-      console.warn("Audio unlock failed");
+      console.warn("Audio unlock blocked");
     });
 }
 
 function playAudio(src) {
-  if (!audioUnlocked) return;
+  if (!audioUnlocked || isPlayingZone) return;
+
+  isPlayingZone = true;
+  setRobotState("speaking");
 
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.currentTime = 0;
   }
 
-  setRobotState("speaking");
-
   currentAudio = new Audio(src);
   currentAudio.play().catch(console.error);
 
   currentAudio.onended = () => {
+    isPlayingZone = false;
     setRobotState("idle");
   };
 }
@@ -115,11 +110,12 @@ function stopAudio() {
     currentAudio.currentTime = 0;
     currentAudio = null;
   }
+  isPlayingZone = false;
   setRobotState("idle");
 }
 
 /*************************
- * DISTANCE (meters)
+ * DISTANCE (HAVERSINE)
  *************************/
 function distanceInMeters(lat1, lon1, lat2, lon2) {
   const R = 6371000;
@@ -139,84 +135,54 @@ function distanceInMeters(lat1, lon1, lat2, lon2) {
 
 /*************************
  * LOCATION HANDLER
- * (FORWARD + BACKWARD SAFE)
  *************************/
 function handleLocation(lat, lon, label = "") {
   statusEl.textContent = `${label} ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
 
-  let closestZone = null;
-  let closestDistance = Infinity;
+  if (currentZoneIndex >= zones.length) return;
+  if (isPlayingZone) return;
 
-  zones.forEach(zone => {
-    if (zone.played) return;
+  const zone = zones[currentZoneIndex];
+  const dist = distanceInMeters(lat, lon, zone.lat, zone.lon);
 
-    const dist = distanceInMeters(lat, lon, zone.lat, zone.lon);
-
-    if (
-      dist <= zone.radius + EXTRA_RADIUS_BUFFER &&
-      dist < closestDistance
-    ) {
-      closestDistance = dist;
-      closestZone = zone;
-    }
-  });
-
-  if (
-    closestZone &&
-    Date.now() - lastTriggerTime > TRIGGER_COOLDOWN
-  ) {
-    lastTriggerTime = Date.now();
-    closestZone.played = true;
-    statusEl.textContent = `Loci: ${closestZone.name}`;
-    playAudio(closestZone.audio);
+  if (dist <= zone.radius || dist <= MAX_MISS_DISTANCE) {
+    statusEl.textContent = `Loci: Zone ${currentZoneIndex + 1}`;
+    playAudio(zone.audio);
+    currentZoneIndex++;
   }
 }
 
 /*************************
- * START / END WALK
+ * START WALK
  *************************/
 function startWalk() {
   isWalking = true;
   walkAction.textContent = "End walk";
   walkAction.classList.add("walking");
 
-  resetZones();
-  unlockAudio();
+  resetWalkState();
   setRobotState("thinking");
   statusEl.textContent = "Walking…";
 
-  if (DEV_MODE) {
-    let step = 0;
-    const fakePath = [
-      { lat: 12.968667, lon: 77.722863 },
-      { lat: 12.968514, lon: 77.723432 },
-      { lat: 12.968140, lon: 77.723941 }
-    ];
-
-    devInterval = setInterval(() => {
-      const pos = fakePath[step % fakePath.length];
-      handleLocation(pos.lat, pos.lon, "Simulating:");
-      step++;
-    }, 4000);
-
-  } else {
-    watchId = navigator.geolocation.watchPosition(
-      pos => {
-        const { latitude, longitude } = pos.coords;
-        handleLocation(latitude, longitude, "Walking:");
-      },
-      () => {
-        statusEl.textContent = "Location access needed";
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 3000,
-        timeout: 10000
-      }
-    );
-  }
+  watchId = navigator.geolocation.watchPosition(
+    pos => {
+      const { latitude, longitude } = pos.coords;
+      handleLocation(latitude, longitude, "Walking:");
+    },
+    () => {
+      statusEl.textContent = "Location access needed";
+    },
+    {
+      enableHighAccuracy: false,
+      maximumAge: 3000,
+      timeout: 10000
+    }
+  );
 }
 
+/*************************
+ * END WALK
+ *************************/
 function endWalk() {
   isWalking = false;
   walkAction.textContent = "Tap to start walk";
@@ -230,17 +196,14 @@ function endWalk() {
     navigator.geolocation.clearWatch(watchId);
     watchId = null;
   }
-
-  if (devInterval !== null) {
-    clearInterval(devInterval);
-    devInterval = null;
-  }
 }
 
 /*************************
- * TAP HANDLER
+ * TAP HANDLER (CRITICAL)
  *************************/
 walkAction.addEventListener("click", () => {
+  unlockAudio(); // must be first
+
   if (!isWalking) {
     startWalk();
   } else {
