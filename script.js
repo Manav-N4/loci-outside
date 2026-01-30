@@ -37,7 +37,7 @@ const zones = [
     lat: 12.968667,
     lon: 77.722863,
     radius: 30,
-    audio: "audio/zone1.wav",
+    audio: "audio/zone1.mp3",
     played: false
   },
   {
@@ -46,7 +46,7 @@ const zones = [
     lat: 12.968514,
     lon: 77.723432,
     radius: 30,
-    audio: "audio/zone2.wav",
+    audio: "audio/zone2.mp3",
     played: false
   },
   {
@@ -55,7 +55,7 @@ const zones = [
     lat: 12.968140,
     lon: 77.723941,
     radius: 25,
-    audio: "audio/zone3.wav",
+    audio: "audio/zone3.mp3",
     played: false
   }
 ];
