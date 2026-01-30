@@ -13,6 +13,7 @@ const statusEl = document.getElementById("status");
 /*************************
  * STATE
  *************************/
+let isPlayingZone = false;
 let isWalking = false;
 let watchId = null;
 let devInterval = null;
@@ -87,19 +88,16 @@ function unlockAudio() {
 }
 
 function playAudio(src) {
-  if (!audioUnlocked) return;
+  if (!audioUnlocked || isPlayingZone) return;
 
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio.currentTime = 0;
-  }
-
+  isPlayingZone = true;
   setRobotState("speaking");
 
   currentAudio = new Audio(src);
   currentAudio.play().catch(console.error);
 
   currentAudio.onended = () => {
+    isPlayingZone = false;
     setRobotState("idle");
   };
 }
@@ -190,9 +188,9 @@ function startWalk() {
         statusEl.textContent = "Location access needed";
       },
       {
-        enableHighAccuracy: true,
-        maximumAge: 1000,
-        timeout: 5000
+        enableHighAccuracy: false,
+        maximumAge: 3000,
+        timeout: 10000
       }
     );
   }
@@ -222,6 +220,8 @@ function endWalk() {
  * TAP HANDLER (TEXT = BUTTON)
  *************************/
 walkAction.addEventListener("click", () => {
+  unlockAudio();
+
   if (!isWalking) {
     startWalk();
   } else {
