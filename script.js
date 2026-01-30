@@ -55,7 +55,7 @@ const zones = [
     name: "Release",
     lat: 12.968140,
     lon: 77.723941,
-    radius: 40,
+    radius: 25,
     audio: "audio/zone3.mp3",
     played: false
   }
