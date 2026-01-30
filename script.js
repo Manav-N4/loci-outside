@@ -34,8 +34,8 @@ const zones = [
   {
     id: "A",
     name: "Threshold",
-    lat: 12.968515,
-    lon: 77.724438,
+    lat: 12.968752,
+    lon: 77.724475,
     radius: 30,
     audio: "audio/zoneA.mp3",
     played: false
@@ -43,40 +43,32 @@ const zones = [
   {
     id: "B",
     name: "In-Between",
-    lat: 12.968289,
-    lon: 77.724186,
+    lat: 12.968681,
+    lon: 77.724188,
     radius: 30,
     audio: "audio/zoneB.mp3",
     played: false
   },
   {
     id: "C",
-    name: "Connector",
-    lat: 12.968184,
-    lon: 77.723790,
-    radius: 30,
+    name: "Approach",
+    lat: 12.968739,
+    lon: 77.722807,
+    radius: 25,
     audio: "audio/zoneC.mp3",
     played: false
   },
   {
     id: "D",
-    name: "Institutional Edge",
-    lat: 12.968360,
-    lon: 77.723265,
-    radius: 30,
-    audio: "audio/zoneD.mp3",
-    played: false
-  },
-  {
-    id: "E",
     name: "Release",
-    lat: 12.968690,
-    lon: 77.722852,
-    radius: 30,
-    audio: "audio/zoneE.mp3",
+    lat: 12.968315,
+    lon: 77.722558,
+    radius: 25,
+    audio: "audio/zoneD.mp3",
     played: false
   }
 ];
+
 
 /*************************
  * HELPERS
