@@ -73,7 +73,7 @@ function resetZones() {
 function unlockAudio() {
   if (audioUnlocked) return;
 
-  const silent = new Audio("audio/zoneA.mp3");
+  const silent = new Audio("audio/zone1.mp3");
   silent.volume = 0;
 
   silent.play()
