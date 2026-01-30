@@ -37,7 +37,7 @@ const zones = [
     name: "Threshold",
     lat: 12.968667,
     lon: 77.722863,
-    radius: 30,
+    radius: 50,
     audio: "audio/zone1.mp3",
     played: false
   },
@@ -46,7 +46,7 @@ const zones = [
     name: "In-Between",
     lat: 12.968514,
     lon: 77.723432,
-    radius: 30,
+    radius: 40,
     audio: "audio/zone2.mp3",
     played: false
   },
@@ -55,7 +55,7 @@ const zones = [
     name: "Release",
     lat: 12.968140,
     lon: 77.723941,
-    radius: 25,
+    radius: 40,
     audio: "audio/zone3.mp3",
     played: false
   }
