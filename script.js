@@ -34,40 +34,32 @@ const zones = [
   {
     id: "A",
     name: "Threshold",
-    lat: 12.968752,
-    lon: 77.724475,
+    lat: 12.968667,
+    lon: 77.722863,
     radius: 30,
-    audio: "audio/zoneA.mp3",
+    audio: "audio/zoneB.mp3",
     played: false
   },
   {
     id: "B",
     name: "In-Between",
-    lat: 12.968681,
-    lon: 77.724188,
+    lat: 12.968514,
+    lon: 77.723432,
     radius: 30,
     audio: "audio/zoneB.mp3",
     played: false
   },
   {
     id: "C",
-    name: "Approach",
-    lat: 12.968739,
-    lon: 77.722807,
-    radius: 25,
-    audio: "audio/zoneC.mp3",
-    played: false
-  },
-  {
-    id: "D",
     name: "Release",
-    lat: 12.968315,
-    lon: 77.722558,
+    lat: 12.968140,
+    lon: 77.723941,
     radius: 25,
-    audio: "audio/zoneD.mp3",
+    audio: "audio/zoneA.mp3",
     played: false
   }
 ];
+
 
 
 /*************************
